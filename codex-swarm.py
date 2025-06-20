@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# version 1.0
+# Author: Thomas Yiu
+# Code type: Python
+# This is codex swarm, AI agent that will control different codex independtly.  This is alpha code for me
 import subprocess
 import concurrent.futures
 import os
