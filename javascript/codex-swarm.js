@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// verison 1.0
+// Javascript version of the codex-swarm, AI agent to run multiple codex independtly with AI agent controls
 
 const fs = require('fs');
 const path = require('path');
