@@ -33,6 +33,15 @@ Codex Swarm is an experimental toolkit for launching multiple [OpenAI Codex](htt
 ```bash
 python python/codex-swarm.py
 ```
+for # of parallel tasks
+```bash
+python python/codex-swarm.py -j 5 #5 tasks
+#or
+python python/codex-swarm.py --max-workers 5 #5 tasks
+
+```
+
+
 You will be prompted for a task name and description. Enter `/template` to list available prompt templates from `python/.swarm`.
 Terminal type can be use with this python swarm
 * gnome-terminal: The default terminal for GNOME desktop environments (e.g., Ubuntu).
