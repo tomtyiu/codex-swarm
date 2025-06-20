@@ -34,6 +34,12 @@ Codex Swarm is an experimental toolkit for launching multiple [OpenAI Codex](htt
 python python/codex-swarm.py
 ```
 You will be prompted for a task name and description. Enter `/template` to list available prompt templates from `python/.swarm`.
+Terminal type can be use with this python swarm
+* gnome-terminal: The default terminal for GNOME desktop environments (e.g., Ubuntu).
+* konsole: The default terminal for KDE desktop environments.
+* x-terminal-emulator: A generic terminal emulator symlink on Debian-based systems (often points to gnome-terminal, xterm, etc.).
+* xterm: A basic, widely available X11 terminal emulator.
+* cmd: Windows command Prompt
 
 ### Node.js
 
