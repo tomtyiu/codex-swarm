@@ -3,106 +3,149 @@
 # Author: Thomas Yiu
 # Code type: Python
 # This is codex swarm, AI agent that will control different codex independtly.  This is alpha code for me
+#!/usr/bin/env python3
+"""
+Interactive tool for spawning Codex workers for a set of tasks.
+"""
+
+import os
+import sys
+import shutil
 import subprocess
 import concurrent.futures
-import os
+import argparse
+from pathlib import Path
+
+# ANSI colors
+PURPLE = "\033[95m"
+RESET = "\033[0m"
+
+# Directory containing template subfolders under .swarm
+SWARM_DIR = Path(__file__).parent / ".swarm"
 
 
-if os.name == 'nt':
-    import ctypes
-    kernel32 = ctypes.windll.kernel32
-    kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
-    
-def coding_task(task_name: str, task_description: str) -> str:
-    """
-    Open a new Command Prompt and run npx codex with the given task description.
-    """
-    cmd = f'start cmd /k "npx codex "{task_description}""'
-    try:
-        # Use shell=True to allow 'start' and 'cmd' commands
-        subprocess.Popen(cmd, shell=True, env=os.environ)
-        return f"Started Command Prompt for task: {task_name}"
-    except Exception as e:
-        return f"Failed to start Command Prompt: {e}"
+def enable_windows_ansi_colors() -> None:
+    """Enable ANSI escape sequence processing on Windows."""
+    if os.name == "nt":
+        try:
+            import ctypes
 
-def enter_task_input():
-    """
-    Function to allow the user to input tasks in a loop.
-    The loop stops when the user enters an empty input.
-    """
-    PURPLE = "\033[95m"
-    
-    RESET = "\033[0m"
-    tasks = {}
-    swarm_dir = os.path.join(os.path.dirname(__file__), '.swarm')
+            handle = ctypes.windll.kernel32.GetStdHandle(-11)
+            mode = ctypes.c_uint()
+            if ctypes.windll.kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+                ctypes.windll.kernel32.SetConsoleMode(handle, mode.value | 0x0004)
+        except Exception:
+            pass
+
+
+def list_templates() -> None:
+    """Print available templates in the .swarm directory."""
+    if not SWARM_DIR.is_dir():
+        print("No .swarm directory found.")
+        return
+    print("Available templates:")
+    for sub in sorted(SWARM_DIR.iterdir()):
+        if sub.is_dir():
+            print(f"  {sub.name}")
+
+
+def prompt_task_description() -> str:
+    """Prompt the user for a task description or choose a template."""
     while True:
-        print("======================================")
-        print("Welcome to the Codex Swarm Task Input!")
-        print("You can enter tasks to be processed by Codex.")
-        print("To finish inputting tasks, just press Enter without typing anything.")
-        task_name = input(f"{PURPLE}Enter task name: {RESET}")
-        if task_name == "":
-            print("Input finished.")
-            break
-        # Prompt for description, allow /template command
-        while True:
-            prompt = f"{PURPLE}Enter task description (or /template): {RESET}"
-            user_input = input(prompt)
-            if user_input.strip() == "":
-                print("Input finished.")
-                return tasks
-            if user_input.strip().startswith('/template'):
-                parts = user_input.strip().split(maxsplit=1)
-                # list templates if no template specified
-                if len(parts) == 1:
-                    if os.path.isdir(swarm_dir):
-                        print("Available templates:")
-                        for name in sorted(os.listdir(swarm_dir)):
-                            print(f"  {name}")
-                    else:
-                        print("No templates directory found.")
-                        continue
-                    choice = input(f"{PURPLE}Select template name: {RESET}").strip()
-                else:
-                    choice = parts[1].strip()
-                template_path = os.path.join(swarm_dir, choice, 'PROMPT.txt')
-                try:
-                    with open(template_path, 'r') as f:
-                        task_description = f.read()
-                    print(f"Using template '{choice}':")
-                    print(task_description)
-                    break
-                except Exception as e:
-                    print(f"Error loading template '{choice}': {e}")
-                    continue
+        entry = input(f"{PURPLE}Description (or /template): {RESET}").strip()
+        if not entry:
+            return ""
+        if entry.startswith("/template"):
+            parts = entry.split(maxsplit=1)
+            if len(parts) == 1:
+                list_templates()
+                choice = input(f"{PURPLE}Select template: {RESET}").strip()
             else:
-                task_description = user_input
-                break
-        tasks[task_name] = task_description
+                choice = parts[1].strip()
+            template_file = SWARM_DIR / choice / "PROMPT.txt"
+            try:
+                return template_file.read_text()
+            except Exception as e:
+                print(f"Error loading template '{choice}': {e}")
+                continue
+        return entry
 
+
+def prompt_tasks() -> dict[str, str]:
+    """Prompt the user to enter multiple named tasks."""
+    tasks: dict[str, str] = {}
+    print("Welcome to the Codex Swarm Task Manager!")
+    print("You can enter multiple tasks with names and descriptions.")
+    print("Type '/template' to select a template for the task description.")
+    print("Press Enter without typing anything to finish entering tasks.")
+    while True:
+        
+        print("\n" + "=" * 40)
+        name = input(f"{PURPLE}Task name (empty to finish): {RESET}").strip()
+        if not name:
+            break
+        description = prompt_task_description()
+        if not description:
+            print("Empty description, skipping task.")
+            continue
+        tasks[name] = description
     return tasks
 
-def loop_tasks(tasks):
-    """
-    Function to loop through the tasks and execute them simultaneously.
-    """
-    responses = {}
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        future_to_task = {
-            executor.submit(coding_task, task_name, task_description): task_name
-            for task_name, task_description in tasks.items()
-        }
-        for future in concurrent.futures.as_completed(future_to_task):
-            task_name = future_to_task[future]
-            try:
-                responses[task_name] = future.result()
-            except Exception as exc:
-                responses[task_name] = f"Generated an exception: {exc}"
-    return responses
 
-# Example usage:
+def start_task_process(name: str, description: str) -> str:
+    """Launch a new terminal window running `npx codex` with the given description."""
+    if os.name == "nt":
+        # Use start to keep the window open after execution
+        cmd = f'start cmd /k "npx codex "{description}""'
+        subprocess.Popen(cmd, shell=True, env=os.environ)
+    else:
+        # Try common terminals
+        for term in ("gnome-terminal", "konsole", "x-terminal-emulator", "xterm"):
+            if shutil.which(term):
+                subprocess.Popen([term, "-e", f"npx codex {description}"])
+                break
+        else:
+            print(f"No supported terminal found for task: {name}")
+    return name
+
+
+def run_tasks(tasks: dict[str, str], max_workers: int) -> dict[str, str]:
+    """Submit tasks to a ThreadPoolExecutor and collect their results."""
+    results: dict[str, str] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_map = {executor.submit(start_task_process, n, d): n for n, d in tasks.items()}
+        for fut in concurrent.futures.as_completed(future_map):
+            name = future_map[fut]
+            try:
+                fut.result()
+                results[name] = "started"
+            except Exception as e:
+                results[name] = f"failed: {e}"
+    return results
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(description="Launch Codex swarm tasks")
+    parser.add_argument(
+        "-j", "--max-workers", type=int, default=4,
+        help="number of parallel tasks to run"
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    enable_windows_ansi_colors()
+    args = parse_args()
+    tasks = prompt_tasks()
+    if not tasks:
+        print("No tasks to run. Exiting.")
+        return
+    results = run_tasks(tasks, args.max_workers)
+    print("\nTask results:")
+    for name, status in results.items():
+        print(f"  {name}: {status}")
+
+
 if __name__ == "__main__":
-    tasks = enter_task_input()
-    responses = loop_tasks(tasks)
-    for task_name, response in responses.items():
-        print(f"Task response for '{task_name}': {response}")
+    main()
