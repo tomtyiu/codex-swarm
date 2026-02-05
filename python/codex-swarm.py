@@ -2,7 +2,7 @@
 # version 1.0
 # Author: Thomas Yiu
 # Code type: Python
-# This is codex swarm, AI agent that will control different codex independtly.  This is alpha code for me
+# This is codex swarm, AI agent that will control different codex independtly.  This is alpha code from me. Use AI to code
 #!/usr/bin/env python3
 """
 Interactive tool for spawning Codex workers for a set of tasks.
@@ -149,3 +149,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
