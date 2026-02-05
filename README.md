@@ -1,6 +1,6 @@
 # Codex Swarm
 
-Codex Swarm is an experimental toolkit for launching multiple [OpenAI Codex](https://platform.openai.com/docs) sessions at once.  Both Python and Node.js implementations are provided and each script opens a new command prompt per task so several Codex instances can run concurrently.
+Codex Swarm is an experimental toolkit for launching multiple [OpenAI Codex](https://developers.openai.com/codex/cli) sessions at once.  Both Python and Node.js implementations are provided and each script opens a new command prompt per task so several Codex instances can run concurrently.
 
 ## Features
 
